@@ -156,246 +156,276 @@ GetContactCount()
 ;获取联系人详情
 GetContactDetail()
 {
-	totalWaitTime := 2000 ; 总等待时间2s
-	interval := 50 ; 每次等待50ms
+    totalWaitTime := 2000 ; 总等待时间2s
+    interval := 50 ; 每次等待50ms
 
-	waitTime := 0
+    waitTime := 0
 
-	Loop {
-		A_Clipboard := "" ; 清空剪贴板
-		Sleep 10 ; 缓冲时间
-		sendinput "^a" ; 全选
-		Sleep 20 ; 缓冲时间
-		sendinput "^c" ; 复制
+    Loop {
+        A_Clipboard := "" ; 清空剪贴板
+        Sleep 10 ; 缓冲时间
+        sendinput "^a" ; 全选
+        Sleep 20 ; 缓冲时间
+        sendinput "^c" ; 复制
 
-		if ClipWait(interval / 1000, 0) ; ClipWait参数为秒，所以Interval需要除以1000
-		{
-			break ; 如果剪贴板更新，则退出循环
-		}
+        if ClipWait(interval / 1000, 0) ; ClipWait参数为秒，所以Interval需要除以1000
+        {
+            break ; 如果剪贴板更新，则退出循环
+        }
 
-		waitTime += interval
-		if (waitTime >= totalWaitTime) {
-			; 移动到上一个
-			send "{Up}"
-			Sleep 50 ; 缓存时间等待下个联系人加载
-			Throw CopyError("copy error")
-		}
-	}
+        waitTime += interval
+        if (waitTime >= totalWaitTime) {
+            ; 移动到上一个
+            send "{Up}"
+            Sleep 50 ; 缓存时间等待下个联系人加载
+            Throw CopyError("copy error")
+        }
+    }
 
-	data := A_Clipboard
-	contactMap := Map()	;新建Map对象，存放联系人信息
-	wechatDetailArr := StrSplit(data, "`n") ;通过换行符进行分割
-	len := wechatDetailArr.Length
+    data := A_Clipboard
+    contactMap := Map()	;新建Map对象，存放联系人信息
+    wechatDetailArr := StrSplit(data, "`n") ;通过换行符进行分割
+    len := wechatDetailArr.Length
 
-	switch len {
-		case 8: ;wechatDetailArr[7]是描述
-		{
-			contactMap[1] := wechatDetailArr[1] ;备注
-			contactMap[2] := wechatDetailArr[2] ;昵称
-			contactMap[3] := wechatDetailArr[3] ;微信ID
-			contactMap[4] := wechatDetailArr[4] ;地区
-			contactMap[5] := wechatDetailArr[6] ;标签
-			contactMap[6] := wechatDetailArr[8] ;个性签名
-		}
-		case 7:
-		{
-			contactMap[1] := wechatDetailArr[1] ;备注
-			contactMap[2] := wechatDetailArr[2] ;昵称
-			contactMap[3] := wechatDetailArr[3] ;微信ID
-			contactMap[4] := wechatDetailArr[4] ;地区
-			contactMap[5] := wechatDetailArr[6] ;标签
-			contactMap[6] := wechatDetailArr[7] ;个性签名
-		}
-		case 6:
-		{
-			; 有备注，但是没有地区信息，最后两个可以是【地区，标签，描述，个性签名】中任意两个，默认给最大可能性 【标签，个性签名】
-			if (wechatDetailArr[1] = wechatDetailArr[4])
-			{
-				contactMap[1] := wechatDetailArr[1] ;备注
-				contactMap[2] := wechatDetailArr[2] ;昵称
-				contactMap[3] := wechatDetailArr[3] ;微信ID
-				contactMap[4] := "-" ;地区
-				contactMap[5] := wechatDetailArr[5] ;标签
-				contactMap[6] := wechatDetailArr[6] ;个性签名
-			}
+    ; 提取电话信息
+    phone := ExtractPhoneNumber(data)
 
-			; 有备注，地区信息，最后两个可以是【地区，标签，描述，个性签名】中任意一个
-			else if (wechatDetailArr[1] = wechatDetailArr[5])
-			{
-				contactMap[1] := wechatDetailArr[1] ;备注
-				contactMap[2] := wechatDetailArr[2] ;昵称
-				contactMap[3] := wechatDetailArr[3] ;微信ID
-				contactMap[4] := wechatDetailArr[4] ;地区
-				if (StrLen(wechatDetailArr[6]) >= 5)
-				{
-					contactMap[5] := "-" ;标签
-					contactMap[6] := wechatDetailArr[6] ;个性签名
-				}
-				else
-				{
-					contactMap[5] := wechatDetailArr[6] ;标签
-					contactMap[6] := "-" ;个性签名
-				}
-			}
+    switch len {
+        case 8: ;wechatDetailArr[7]是描述
+        {
+            contactMap[1] := wechatDetailArr[1] ;备注
+            contactMap[2] := wechatDetailArr[2] ;昵称
+            contactMap[3] := wechatDetailArr[3] ;微信ID
+            contactMap[4] := wechatDetailArr[4] ;地区
+            contactMap[5] := wechatDetailArr[6] ;标签
+            contactMap[6] := wechatDetailArr[8] ;个性签名
+            contactMap[7] := phone ;电话
+        }
+        case 7:
+        {
+            contactMap[1] := wechatDetailArr[1] ;备注
+            contactMap[2] := wechatDetailArr[2] ;昵称
+            contactMap[3] := wechatDetailArr[3] ;微信ID
+            contactMap[4] := wechatDetailArr[4] ;地区
+            contactMap[5] := wechatDetailArr[6] ;标签
+            contactMap[6] := wechatDetailArr[7] ;个性签名
+            contactMap[7] := phone ;电话
+        }
+        case 6:
+        {
+            ; 有备注，但是没有地区信息，最后两个可以是【地区，标签，描述，个性签名】中任意两个，默认给最大可能性 【标签，个性签名】
+            if (wechatDetailArr[1] = wechatDetailArr[4])
+            {
+                contactMap[1] := wechatDetailArr[1] ;备注
+                contactMap[2] := wechatDetailArr[2] ;昵称
+                contactMap[3] := wechatDetailArr[3] ;微信ID
+                contactMap[4] := "-" ;地区
+                contactMap[5] := wechatDetailArr[5] ;标签
+                contactMap[6] := wechatDetailArr[6] ;个性签名
+                contactMap[7] := phone ;电话
+            }
 
-			; 没有备注，wechatDetailArr[5]是描述
-			else
-			{
-				contactMap[1] := "-" ;备注
-				contactMap[2] := wechatDetailArr[1] ;昵称
-				contactMap[3] := wechatDetailArr[2] ;微信ID
-				contactMap[4] := wechatDetailArr[3] ;地区
-				contactMap[5] := wechatDetailArr[4] ;标签
-				contactMap[6] := wechatDetailArr[6] ;个性签名
-			}
-		}
-		case 5:
-		{
-			; 有备注，但是没有地区信息，最后一个可能是标签或个性签名，这里根据长度判断
-			if (wechatDetailArr[1] = wechatDetailArr[4])
-			{
-				contactMap[1] := wechatDetailArr[1] ;备注
-				contactMap[2] := wechatDetailArr[2] ;昵称
-				contactMap[3] := wechatDetailArr[3] ;微信ID
-				contactMap[4] := "-" ;地区
-				if (StrLen(wechatDetailArr[5]) >= 5)
-				{
-					contactMap[5] := "-" ;标签
-					contactMap[6] := wechatDetailArr[5] ;个性签名
-				}
-				else
-				{
-					contactMap[5] := wechatDetailArr[5] ;标签
-					contactMap[6] := "-" ;个性签名
-				}
-			}
+            ; 有备注，地区信息，最后两个可以是【地区，标签，描述，个性签名】中任意一个
+            else if (wechatDetailArr[1] = wechatDetailArr[5])
+            {
+                contactMap[1] := wechatDetailArr[1] ;备注
+                contactMap[2] := wechatDetailArr[2] ;昵称
+                contactMap[3] := wechatDetailArr[3] ;微信ID
+                contactMap[4] := wechatDetailArr[4] ;地区
+                if (StrLen(wechatDetailArr[6]) >= 5)
+                {
+                    contactMap[5] := "-" ;标签
+                    contactMap[6] := wechatDetailArr[6] ;个性签名
+                    contactMap[7] := phone ;电话
+                }
+                else
+                {
+                    contactMap[5] := wechatDetailArr[6] ;标签
+                    contactMap[6] := "-" ;个性签名
+                    contactMap[7] := phone ;电话
+                }
+            }
 
-			; 有备注，地区信息
-			else if (wechatDetailArr[1] = wechatDetailArr[5])
-			{
-				contactMap[1] := wechatDetailArr[1] ;备注
-				contactMap[2] := wechatDetailArr[2] ;昵称
-				contactMap[3] := wechatDetailArr[3] ;微信ID
-				contactMap[4] := wechatDetailArr[4] ;地区
-				contactMap[5] := "-" ;标签
-				contactMap[6] := "-" ;个性签名
-			}
+            ; 没有备注，wechatDetailArr[5]是描述
+            else
+            {
+                contactMap[1] := "-" ;备注
+                contactMap[2] := wechatDetailArr[1] ;昵称
+                contactMap[3] := wechatDetailArr[2] ;微信ID
+                contactMap[4] := wechatDetailArr[3] ;地区
+                contactMap[5] := wechatDetailArr[4] ;标签
+                contactMap[6] := wechatDetailArr[6] ;个性签名
+                contactMap[7] := phone ;电话
+            }
+        }
+        case 5:
+        {
+            ; 有备注，但是没有地区信息，最后一个可能是标签或个性签名，这里根据长度判断
+            if (wechatDetailArr[1] = wechatDetailArr[4])
+            {
+                contactMap[1] := wechatDetailArr[1] ;备注
+                contactMap[2] := wechatDetailArr[2] ;昵称
+                contactMap[3] := wechatDetailArr[3] ;微信ID
+                contactMap[4] := "-" ;地区
+                if (StrLen(wechatDetailArr[5]) >= 5)
+                {
+                    contactMap[5] := "-" ;标签
+                    contactMap[6] := wechatDetailArr[5] ;个性签名
+                    contactMap[7] := phone ;电话
+                }
+                else
+                {
+                    contactMap[5] := wechatDetailArr[5] ;标签
+                    contactMap[6] := "-" ;个性签名
+                    contactMap[7] := phone ;电话
+                }
+            }
 
-			; 没有备注，能确定的只有昵称ID，后续可以是【地区，标签，描述，个性签名】中任意三个，默认给最大可能性 【地区，标签，个性签名】
-			else
-			{
-				contactMap[1] := "-" ;备注
-				contactMap[2] := wechatDetailArr[1] ;昵称
-				contactMap[3] := wechatDetailArr[2] ;微信ID
-				contactMap[4] := wechatDetailArr[3] ;地区
-				contactMap[5] := wechatDetailArr[4] ;标签
-				contactMap[6] := wechatDetailArr[5] ;个性签名
-			}
-		}
-		case 4:	; 备注 + 昵称微信ID  或者 昵称
-		{
-			; 有备注，但是没有地区信息
-			if (wechatDetailArr[1] = wechatDetailArr[4])
-			{
-				contactMap[1] := wechatDetailArr[1] ;备注
-				contactMap[2] := wechatDetailArr[2] ;昵称
-				contactMap[3] := wechatDetailArr[3] ;微信ID
-				contactMap[4] := "-" ;地区
-				contactMap[5] := "-" ;标签
-				contactMap[6] := "-" ;个性签名
-			}
+            ; 有备注，地区信息
+            else if (wechatDetailArr[1] = wechatDetailArr[5])
+            {
+                contactMap[1] := wechatDetailArr[1] ;备注
+                contactMap[2] := wechatDetailArr[2] ;昵称
+                contactMap[3] := wechatDetailArr[3] ;微信ID
+                contactMap[4] := wechatDetailArr[4] ;地区
+                contactMap[5] := "-" ;标签
+                contactMap[6] := "-" ;个性签名
+                contactMap[7] := phone ;电话
+            }
 
-			; 无备注，只能确定昵称及ID，后续可以是【地区，标注，描述，个性签名】中任意连续两个，默认给最大可能性 【地区，个性签名】
-			if (wechatDetailArr[1] != wechatDetailArr[4])
-			{
-				contactMap[1] := "-" ;备注
-				contactMap[2] := wechatDetailArr[1] ;昵称
-				contactMap[3] := wechatDetailArr[2] ;微信ID
-				contactMap[4] := wechatDetailArr[3] ;地区
-				contactMap[5] := "-" ;标签
-				contactMap[6] := wechatDetailArr[4] ;个性签名
-			}
-		}
-		case 3:	; 昵称，微信ID，地区（无法区分企业微信）
-		{
-			contactMap[1] := "-" ;备注
-			contactMap[2] := wechatDetailArr[1] ;昵称
-			contactMap[3] := wechatDetailArr[2] ;微信ID
-			contactMap[4] := wechatDetailArr[3] ;地区
-			contactMap[5] := "-" ;标签或描述
-			contactMap[6] := "-" ;个性签名
-		}
-		case 2:	; 仅有昵称及微信ID
-		{
-			contactMap[1] := "-" ;备注
-			contactMap[2] := wechatDetailArr[1] ;昵称
-			contactMap[3] := wechatDetailArr[2] ;微信ID
-			contactMap[4] := "-" ;地区
-			contactMap[5] := "-" ;标签
-			contactMap[6] := "-" ;个性签名
-		}
-	}
+            ; 没有备注，能确定的只有昵称ID，后续可以是【地区，标签，描述，个性签名】中任意三个，默认给最大可能性 【地区，标签，个性签名】
+            else
+            {
+                contactMap[1] := "-" ;备注
+                contactMap[2] := wechatDetailArr[1] ;昵称
+                contactMap[3] := wechatDetailArr[2] ;微信ID
+                contactMap[4] := wechatDetailArr[3] ;地区
+                contactMap[5] := wechatDetailArr[4] ;标签
+                contactMap[6] := wechatDetailArr[5] ;个性签名
+                contactMap[7] := phone ;电话
+            }
+        }
+        case 4:	; 备注 + 昵称微信ID  或者 昵称
+        {
+            ; 有备注，但是没有地区信息
+            if (wechatDetailArr[1] = wechatDetailArr[4])
+            {
+                contactMap[1] := wechatDetailArr[1] ;备注
+                contactMap[2] := wechatDetailArr[2] ;昵称
+                contactMap[3] := wechatDetailArr[3] ;微信ID
+                contactMap[4] := "-" ;地区
+                contactMap[5] := "-" ;标签
+                contactMap[6] := "-" ;个性签名
+                contactMap[7] := phone ;电话
+            }
 
-	; 元数据
-	contactMap[7] := data
+            ; 无备注，只能确定昵称及ID，后续可以是【地区，标注，描述，个性签名】中任意连续两个，默认给最大可能性 【地区，个性签名】
+            if (wechatDetailArr[1] != wechatDetailArr[4])
+            {
+                contactMap[1] := "-" ;备注
+                contactMap[2] := wechatDetailArr[1] ;昵称
+                contactMap[3] := wechatDetailArr[2] ;微信ID
+                contactMap[4] := wechatDetailArr[3] ;地区
+                contactMap[5] := "-" ;标签
+                contactMap[6] := wechatDetailArr[4] ;个性签名
+                contactMap[7] := phone ;电话
+            }
+        }
+        case 3:	; 昵称，微信ID，地区（无法区分企业微信）
+        {
+            contactMap[1] := "-" ;备注
+            contactMap[2] := wechatDetailArr[1] ;昵称
+            contactMap[3] := wechatDetailArr[2] ;微信ID
+            contactMap[4] := wechatDetailArr[3] ;地区
+            contactMap[5] := "-" ;标签或描述
+            contactMap[6] := "-" ;个性签名
+            contactMap[7] := phone ;电话
+        }
+        case 2:	; 仅有昵称及微信ID
+        {
+            contactMap[1] := "-" ;备注
+            contactMap[2] := wechatDetailArr[1] ;昵称
+            contactMap[3] := wechatDetailArr[2] ;微信ID
+            contactMap[4] := "-" ;地区
+            contactMap[5] := "-" ;标签
+            contactMap[6] := "-" ;个性签名
+            contactMap[7] := phone ;电话
+        }
+    }
 
-	; 移动到上一个
-	send "{Up}"
-	
-	Sleep Random(20, 100) ;缓存时间等待下个联系人加载
+    ; 元数据
+    contactMap[8] := data
 
-	Return contactMap
+    ; 移动到上一个
+    send "{Up}"
+    
+    Sleep Random(20, 100) ;缓存时间等待下个联系人加载
+
+    Return contactMap
 }
+
+; 提取电话信息
+ExtractPhoneNumber(data)
+{
+    ; 使用正则表达式提取电话信息
+    phone := ""
+    if (RegExMatch(data, "O)(\+?\d{1,4}[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9})", match))
+    {
+        phone := match.Value
+    }
+    return phone
+}	
+	
 
 ;保存联系人为Csv
 SaveContactToCsv(path, contactCount)
 {
-	fileName := Format("{1}\{2}.csv", path, A_Now) ;文件名
-	csvFile := FileOpen(fileName, "w", "UTF-8")
+    fileName := Format("{1}\{2}.csv", path, A_Now) ;文件名
+    csvFile := FileOpen(fileName, "w", "UTF-8")
 
-	; 标题
-	csvFile.WriteLine("备注,昵称,微信号,地区,标签,个性签名,元数据")
-	errorCount := 0 ;失败次数，当连续3次失败后，视为导出完成
-	loop
-	{
-		try
-		{
-			csvFile.WriteLine(FormatContactCsv(GetContactDetail()))
-			contactCount-- ;写入成功，自减1
-			errorCount := 0 ;成功后失败次数归零，重新计数
-		}
-		catch as e
-		{
-			if	(++errorCount > 3) ;自增失败次数
-				Break ;联系失败3次，视为导出成功
-		}
+    ; 标题
+    csvFile.WriteLine("备注,昵称,微信号,地区,标签,个性签名,电话,元数据")
+    errorCount := 0 ;失败次数，当连续3次失败后，视为导出完成
+    loop
+    {
+        try
+        {
+            csvFile.WriteLine(FormatContactCsv(GetContactDetail()))
+            contactCount-- ;写入成功，自减1
+            errorCount := 0 ;成功后失败次数归零，重新计数
+        }
+        catch as e
+        {
+            if	(++errorCount > 3) ;自增失败次数
+                Break ;联系失败3次，视为导出成功
+        }
 
-		; 当行数大于微信联系人时，导出完毕跳出
-		if (contactCount <= 0)
-			Break
-	}	
-	
-	csvFile.Close()
+        ; 当行数大于微信联系人时，导出完毕跳出
+        if (contactCount <= 0)
+            Break
+    }	
+    
+    csvFile.Close()
 }
 
 FormatContactCsv(map)
 {
-	return Format("{1},{2},{3},{4},{5},{6},{7}", FormatCsvItem(map[1]), FormatCsvItem(map[2]), FormatCsvItem(map[3]), FormatCsvItem(map[4]), FormatCsvItem(map[5]), FormatCsvItem(map[6]), FormatCsvItem(StrReplace(map[7], "`n", "        ")))
+    return Format("{1},{2},{3},{4},{5},{6},{7},{8}", FormatCsvItem(map[1]), FormatCsvItem(map[2]), FormatCsvItem(map[3]), FormatCsvItem(map[4]), FormatCsvItem(map[5]), FormatCsvItem(map[6]), FormatCsvItem(map[7]), FormatCsvItem(StrReplace(map[8], "`n", "        ")))
 }
 
 FormatCsvItem(item)
 {
-	if (StrLen(item) = 1)
-	{
-		return item
-	}
+    if (StrLen(item) = 1)
+    {
+        return item
+    }
 
-	if (SubStr(item,1,1) = "+" || SubStr(item,1,1) = "-" || SubStr(item,1,1) = "=" )
-	{
-		return "'" . item
-	}
-	
-	return item
+    if (SubStr(item,1,1) = "+" || SubStr(item,1,1) = "-" || SubStr(item,1,1) = "=" )
+    {
+        return "'" . item
+    }
+    
+    return item
 }
 
 ;#endregion
