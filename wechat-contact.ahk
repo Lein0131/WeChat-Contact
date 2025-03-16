@@ -375,7 +375,11 @@ ExtractPhoneNumber(data)
     }
     return phone
 }	
-	
+
+Sleep Random(20, 100) ;缓存时间等待下个联系人加载
+
+	Return contactMap
+}	
 
 ;保存联系人为Csv
 SaveContactToCsv(path, contactCount)
