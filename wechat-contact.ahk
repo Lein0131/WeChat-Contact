@@ -1,4 +1,4 @@
-﻿; 坐标常量
+; 坐标常量
 _winLocalX := 0 * (A_ScreenDPI / 96) ;微信窗口X坐标
 _winLocalY := 0 * (A_ScreenDPI / 96) ;微信窗口Y坐标
 _winWidth := 880 * (A_ScreenDPI / 96) ;微信窗口宽
@@ -15,7 +15,6 @@ _contactListX := 150 * (A_ScreenDPI / 96) ;微信联系人列表X坐标
 _contactListY := 300 * (A_ScreenDPI / 96) ;微信联系人列表Y坐标
 _ahkWeChatAHKClassName := "ahk_class WeChatMainWndForPC" ;微信窗口名
 _projectUrl := "https://github.com/XgHao/WeChat-Contact" ;项目地址
-;_msExcelComObject := "Excel.Application" ;Ms Excel com object
 
 ; 自定义异常-复制文字异常
 class CopyError extends Error
@@ -30,11 +29,11 @@ class UserTerminateOperationError extends Error
 {}
 
 ; 设置优先级高，鼠标速度最快
-ProcessSetPriority "High"
-SetKeyDelay 0
+Process, Priority,, High
+SetKeyDelay, 0
 
-;提示
-msgbox("1.win+c开始导出`r`n2.win+ecs停止", "说明", "OK")
+; 提示
+MsgBox, 1.win+c开始导出`r`n2.win+ecs停止, 说明, OK
 
 ; ESC 退出
 #esc::ExitApp
@@ -76,12 +75,12 @@ msgbox("1.win+c开始导出`r`n2.win+ecs停止", "说明", "OK")
 		; 反馈信息	
         Result := MsgBox("发生了错误，是否反馈？`n`n错误信息如下:`n" errorMsg, "出错了", "YesNo Icon!")
         if Result = "Yes"
-            run _projectUrl "/issues/new"
+            run %_projectUrl% "/issues/new"
 		Return
 	}
 
 	; 打开文件路径
-	Run "explore " path
+	Run, explore %path%
 
 	StarMyGitHub()
 }
@@ -91,7 +90,7 @@ CheckWeChatWin()
 {
 	if !WinExist(_ahkWeChatAHKClassName)
 	{
-		MsgBox("未检测到微信窗口，请打开微信，按下【win+c】重新运行", "未找到微信", "OK Icon?")
+		MsgBox, 未检测到微信窗口，请打开微信，按下【win+c】重新运行, 未找到微信, OK Icon?
 		Throw WeChatWinError("Wechat Windows Is Not Active")
 	}
 }
@@ -100,19 +99,18 @@ CheckWeChatWin()
 SetWeChatWin()
 {
 	CheckWeChatWin()
-	winactivate ; 激活微信窗口
-	winmove _winLocalX,_winLocalY,_winWidth,_winHeight
-	Sleep 100
+	WinActivate ; 激活微信窗口
+	WinMove, _winLocalX, _winLocalY, _winWidth, _winHeight
+	Sleep, 100
 
 	; 切换到联系人选项卡
-	click _contactLocalX, _contactLocalY
-	Sleep 100
+	Click, %_contactLocalX%, %_contactLocalY%
+	Sleep, 100
 
 	; 定位到最后一个微信好友
-	click _contactListX, _contactListY
-	; click Format("{1} {2} Middle", _contactListX, _contactListY)
-	Sleep 100
-	send "{End}"
+	Click, %_contactListX%, %_contactListY%
+	Sleep, 100
+	Send, {End}
 }
 
 ; 创建文件路径
@@ -120,18 +118,18 @@ CreateFilePath()
 {
 	path := StrReplace(Format("{1}\微信好友记录", A_WorkingDir), "\\", "\") ;路径
 	if !DirExist(path) ;不存在该路径则创建
-		DirCreate path
+		DirCreate, %path%
 	Return path
 }
 
-;输入联系人数
+; 输入联系人数
 GetContactCount()
 {
 	contactCountValue := 0
 	Loop
 	{
-		inputBoxResult := InputBox("请输入你的微信好友数，可以在联系人界面中通讯录管理中查看`n`n初次运行请输入较小的值来测试结果`n`nTips: 在导出期间尽可能避免其他操作`n`nTips: 由于企业微信用户的存在，实际的好友数要大于通讯录管理界面的好友数，所以你在输入时需要加上若干值，比如通讯录管理界面中显示有240个好友，那么你可以输入260`n", "请输入读取联系人的次数", "W400 H400")
-		contactCountValue := inputBoxResult.Value
+		InputBox, inputBoxResult, 请输入你的微信好友数, 请输入你的微信好友数，可以在联系人界面中通讯录管理中查看`n`n初次运行请输入较小的值来测试结果`n`nTips: 在导出期间尽可能避免其他操作`n`nTips: 由于企业微信用户的存在，实际的好友数要大于通讯录管理界面的好友数，所以你在输入时需要加上若干值，比如通讯录管理界面中显示有240个好友，那么你可以输入260`n, , 400, 400
+		contactCountValue := inputBoxResult
 		result := inputBoxResult.Result
 		if (result = "Cancel")
 			Throw UserTerminateOperationError("GetContactCount User Cancel")	;终止操作
@@ -144,16 +142,14 @@ GetContactCount()
 		}
 		catch
 		{
-			MsgBox("无效的数字，请重新输入", "错误", "OK Icon!")
+			MsgBox, 无效的数字，请重新输入, 错误, OK Icon!
 		}
 	}
 
 	Return contactCountValue
 }
 
-;#region 新版本获取方式 [version >= 3.7.0]
-
-;获取联系人详情
+; 获取联系人详情
 GetContactDetail()
 {
 	totalWaitTime := 2000 ; 总等待时间2s
@@ -163,10 +159,10 @@ GetContactDetail()
 
 	Loop {
 		A_Clipboard := "" ; 清空剪贴板
-		Sleep 10 ; 缓冲时间
-		sendinput "^a" ; 全选
-		Sleep 20 ; 缓冲时间
-		sendinput "^c" ; 复制
+		Sleep, 10 ; 缓冲时间
+		SendInput, ^a ; 全选
+		Sleep, 20 ; 缓冲时间
+		SendInput, ^c ; 复制
 
 		if ClipWait(interval / 1000, 0) ; ClipWait参数为秒，所以Interval需要除以1000
 		{
@@ -176,8 +172,8 @@ GetContactDetail()
 		waitTime += interval
 		if (waitTime >= totalWaitTime) {
 			; 移动到上一个
-			send "{Up}"
-			Sleep 50 ; 缓存时间等待下个联系人加载
+			Send, {Up}
+			Sleep, 50 ; 缓存时间等待下个联系人加载
 			Throw CopyError("copy error")
 		}
 	}
@@ -186,6 +182,9 @@ GetContactDetail()
 	contactMap := Map()	;新建Map对象，存放联系人信息
 	wechatDetailArr := StrSplit(data, "`n") ;通过换行符进行分割
 	len := wechatDetailArr.Length
+
+	; 提取电话信息
+	phone := ExtractPhoneNumber(data)
 
 	switch len {
 		case 8: ;wechatDetailArr[7]是描述
@@ -196,6 +195,7 @@ GetContactDetail()
 			contactMap[4] := wechatDetailArr[4] ;地区
 			contactMap[5] := wechatDetailArr[6] ;标签
 			contactMap[6] := wechatDetailArr[8] ;个性签名
+			contactMap[7] := phone ;电话
 		}
 		case 7:
 		{
@@ -205,6 +205,7 @@ GetContactDetail()
 			contactMap[4] := wechatDetailArr[4] ;地区
 			contactMap[5] := wechatDetailArr[6] ;标签
 			contactMap[6] := wechatDetailArr[7] ;个性签名
+			contactMap[7] := phone ;电话
 		}
 		case 6:
 		{
@@ -217,6 +218,7 @@ GetContactDetail()
 				contactMap[4] := "-" ;地区
 				contactMap[5] := wechatDetailArr[5] ;标签
 				contactMap[6] := wechatDetailArr[6] ;个性签名
+				contactMap[7] := phone ;电话
 			}
 
 			; 有备注，地区信息，最后两个可以是【地区，标签，描述，个性签名】中任意一个
@@ -230,11 +232,13 @@ GetContactDetail()
 				{
 					contactMap[5] := "-" ;标签
 					contactMap[6] := wechatDetailArr[6] ;个性签名
+					contactMap[7] := phone ;电话
 				}
 				else
 				{
 					contactMap[5] := wechatDetailArr[6] ;标签
 					contactMap[6] := "-" ;个性签名
+					contactMap[7] := phone ;电话
 				}
 			}
 
@@ -247,6 +251,7 @@ GetContactDetail()
 				contactMap[4] := wechatDetailArr[3] ;地区
 				contactMap[5] := wechatDetailArr[4] ;标签
 				contactMap[6] := wechatDetailArr[6] ;个性签名
+				contactMap[7] := phone ;电话
 			}
 		}
 		case 5:
@@ -262,11 +267,13 @@ GetContactDetail()
 				{
 					contactMap[5] := "-" ;标签
 					contactMap[6] := wechatDetailArr[5] ;个性签名
+					contactMap[7] := phone ;电话
 				}
 				else
 				{
 					contactMap[5] := wechatDetailArr[5] ;标签
 					contactMap[6] := "-" ;个性签名
+					contactMap[7] := phone ;电话
 				}
 			}
 
@@ -279,6 +286,7 @@ GetContactDetail()
 				contactMap[4] := wechatDetailArr[4] ;地区
 				contactMap[5] := "-" ;标签
 				contactMap[6] := "-" ;个性签名
+				contactMap[7] := phone ;电话
 			}
 
 			; 没有备注，能确定的只有昵称ID，后续可以是【地区，标签，描述，个性签名】中任意三个，默认给最大可能性 【地区，标签，个性签名】
@@ -290,6 +298,7 @@ GetContactDetail()
 				contactMap[4] := wechatDetailArr[3] ;地区
 				contactMap[5] := wechatDetailArr[4] ;标签
 				contactMap[6] := wechatDetailArr[5] ;个性签名
+				contactMap[7] := phone ;电话
 			}
 		}
 		case 4:	; 备注 + 昵称微信ID  或者 昵称
@@ -303,6 +312,7 @@ GetContactDetail()
 				contactMap[4] := "-" ;地区
 				contactMap[5] := "-" ;标签
 				contactMap[6] := "-" ;个性签名
+				contactMap[7] := phone ;电话
 			}
 
 			; 无备注，只能确定昵称及ID，后续可以是【地区，标注，描述，个性签名】中任意连续两个，默认给最大可能性 【地区，个性签名】
@@ -314,6 +324,7 @@ GetContactDetail()
 				contactMap[4] := wechatDetailArr[3] ;地区
 				contactMap[5] := "-" ;标签
 				contactMap[6] := wechatDetailArr[4] ;个性签名
+				contactMap[7] := phone ;电话
 			}
 		}
 		case 3:	; 昵称，微信ID，地区（无法区分企业微信）
@@ -324,6 +335,7 @@ GetContactDetail()
 			contactMap[4] := wechatDetailArr[3] ;地区
 			contactMap[5] := "-" ;标签或描述
 			contactMap[6] := "-" ;个性签名
+			contactMap[7] := phone ;电话
 		}
 		case 2:	; 仅有昵称及微信ID
 		{
@@ -333,28 +345,41 @@ GetContactDetail()
 			contactMap[4] := "-" ;地区
 			contactMap[5] := "-" ;标签
 			contactMap[6] := "-" ;个性签名
+			contactMap[7] := phone ;电话
 		}
 	}
 
 	; 元数据
-	contactMap[7] := data
+	contactMap[8] := data
 
 	; 移动到上一个
-	send "{Up}"
+	Send, {Up}
 	
-	Sleep Random(20, 100) ;缓存时间等待下个联系人加载
+	Sleep, Random(20, 100) ;缓存时间等待下个联系人加载
 
 	Return contactMap
 }
 
-;保存联系人为Csv
+; 提取电话信息
+ExtractPhoneNumber(data)
+{
+	; 使用正则表达式提取电话信息
+	phone := ""
+	if (RegExMatch(data, "O)(\+?\d{1,4}[-.\s]?\(?\d{1,4}\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9})", match))
+	{
+		phone := match.Value
+	}
+	return phone
+}
+
+; 保存联系人为Csv
 SaveContactToCsv(path, contactCount)
 {
 	fileName := Format("{1}\{2}.csv", path, A_Now) ;文件名
 	csvFile := FileOpen(fileName, "w", "UTF-8")
 
 	; 标题
-	csvFile.WriteLine("备注,昵称,微信号,地区,标签,个性签名,元数据")
+	csvFile.WriteLine("备注,昵称,微信号,地区,标签,个性签名,电话,元数据")
 	errorCount := 0 ;失败次数，当连续3次失败后，视为导出完成
 	loop
 	{
@@ -380,7 +405,7 @@ SaveContactToCsv(path, contactCount)
 
 FormatContactCsv(map)
 {
-	return Format("{1},{2},{3},{4},{5},{6},{7}", FormatCsvItem(map[1]), FormatCsvItem(map[2]), FormatCsvItem(map[3]), FormatCsvItem(map[4]), FormatCsvItem(map[5]), FormatCsvItem(map[6]), FormatCsvItem(StrReplace(map[7], "`n", "        ")))
+	return Format("{1},{2},{3},{4},{5},{6},{7},{8}", FormatCsvItem(map[1]), FormatCsvItem(map[2]), FormatCsvItem(map[3]), FormatCsvItem(map[4]), FormatCsvItem(map[5]), FormatCsvItem(map[6]), FormatCsvItem(map[7]), FormatCsvItem(StrReplace(map[8], "`n", "        ")))
 }
 
 FormatCsvItem(item)
@@ -398,11 +423,9 @@ FormatCsvItem(item)
 	return item
 }
 
-;#endregion
-
 StarMyGitHub()
 {
 	Result := MsgBox("导出成功！可在打开的文件夹中查看`n`n制作不易，若对你有帮忙请赏一个Star⭐吧", "导出成功", "YesNo Iconi")
 	if Result = "Yes"
-		run _projectUrl
+		Run, %_projectUrl%
 }
